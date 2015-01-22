@@ -1,0 +1,142 @@
+'''
+A visualization tool to examine the activities of different user class in big cities.
+Usage: python visualize 
+        -u role/gender/age 
+        -c Amsterdam/London/Paris/Rome
+        -a geo/temporal
+        -m scatter/kde
+'''
+
+import MySQLdb
+import sys
+import numpy as np
+from two_dim_kde import *
+import getopt
+
+# connect to database, which has the following main tables: 
+# tweets of users sent in 3 weeks, user twitter profiles, and user derived profiles, venue profile
+con = None
+con = MySQLdb.connect(host='127.0.0.1', db='Culture', user='root', passwd='')
+cur = con.cursor()
+
+# define user categories according to the following fields 
+u_role = ['FOREIGN_TOURIST', 'LOCAL_TOURIST', 'RESIDENT']
+u_gender = ['Male', 'Female']
+u_age = [(16,30),(31,45),(46,200)]
+
+# define the location of four cities
+loc_amsterdam = [52.299175, 52.427505, 4.739402, 4.989898]
+loc_london = [51.4513133054, 51.5538081151, -0.3240025797, 0.0730833169]
+loc_paris = [48.815573, 48.902145, 2.2609345347, 2.4228856827]
+loc_rome = [41.8200201386, 41.9744022955, 12.3945787041, 12.5703003967]
+name_cities = ['Amsterdam', 'London', 'Paris', 'Rome']
+loc_cities = [loc_amsterdam, loc_london, loc_paris, loc_rome]
+
+def visualize_uclass_city(loc_city, u_category, tweets_info, plotNo, plotIndex, axis, method):
+    if axis=='geo' and method == 'kde':
+        data_visulize_geo_kde(loc_city, u_category, tweets_info, plotNo, plotIndex)
+    if axis=='geo' and method == 'scatter':
+        data_visulize_geo_scatter(loc_city, u_category, tweets_info, plotNo, plotIndex)
+    if axis=='temporal' and method == 'kde':
+        data_visulize_temporal_kde(loc_city, u_category, tweets_info, plotNo, plotIndex)
+    if axis=='temporal' and method == 'scatter':
+        data_visulize_temporal_scatter(loc_city, u_category, tweets_info, plotNo, plotIndex)
+    return 0
+
+def explore_age(loc_city):
+    f = open('ages.dat', 'w')
+    qry = "select g_age from twitter_tweets as T, twitter_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id"
+    cur.execute(qry)
+    ages = cur.fetchall()
+    for age in ages:
+        if age[0]!=None:
+            f.write(str(age[0])+'\n')
+    f.close()
+    return 0
+
+def usage():
+    print "Usage: python visualize [-option] arg \n"+\
+        "  -u role/gender/age              #select user categorization criteria\n"+\
+        "  -c Amsterdam/London/Paris/Rome  #select city \n"+\
+        "  -a geo/temporal                 #select the dimension for visualization\n"+\
+        "  -m scatter/kde                  #select visualizing method"
+
+if __name__ == '__main__':
+    u_cat = ''
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "u:c:a:m:")
+        #print opts
+    except getopt.GetoptError as err:
+        # print help information and exit:
+        print str(err)  # will print something like "option -a not recognized"
+        usage()
+        sys.exit(2)
+    for o, a in opts:
+        if o == '-u':
+            u_cat = a
+            if a == 'role':
+                u_class = u_role
+            if a == 'gender':
+                u_class = u_gender
+            if a == 'age':
+                u_class = u_age
+        if o == '-c':
+            name_city = a
+        if o == '-a':
+            axis = a
+        if o == '-m':
+            method = a
+    
+    # for each city, each user class, visualize the geographical distribution
+
+    fig = plt.figure(figsize=(16, 5))
+    i = name_cities.index(name_city)
+    loc_city = loc_cities[i]
+    #fig.suptitle('User activities in ' + name_city, fontsize=20)
+    print 'Results of: ' + name_city
+    plotIndex = 0
+    for u_category in u_class:
+        # get all activities locations inside the city, performed by the specified category of users
+        if u_class==u_role:
+            print '..' + u_category
+            if axis=='geo':
+                qry = "select longitude, latitude from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.uclass='" + u_category + "' and l_city='"+name_city+"'"
+            if axis=='temporal':
+                qry = "select T.createdAt from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.uclass='" + u_category + "' and l_city='"+name_city+"'"
+        if u_class==u_gender:
+            print '..' + u_category
+            if axis=='geo':
+                qry = "select longitude, latitude from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.g_gender='" + u_category + "' and l_city='"+name_city+"'"
+            if axis=='temporal':
+                qry = "select T.createdAt from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.g_gender='" + u_category + "' and l_city='"+name_city+"'"
+        if u_class == u_age:
+            print '..age in (' + str(u_category[0])+','+str(u_category[1])+')'
+            if axis=='geo':
+                qry = "select longitude, latitude from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.g_age>=" + str(u_category[0]) + " and U.g_age<="+str(u_category[1]) + " and l_city='"+name_city+"'"
+            if axis=='temporal':
+                qry = "select T.createdAt from inst_posts as T, inst_profiles as U " + \
+                "where ((`latitude` between " + str(loc_city[0]) + " and " + str(loc_city[1]) + ") and (`longitude` between " + str(loc_city[2]) + " and " + str(loc_city[3]) + ")) and " + \
+                "T.userId=U.id and U.g_age>=" + str(u_category[0]) + " and U.g_age<="+str(u_category[1]) + " and l_city='"+name_city+"'"
+            # print out the distribution of ages
+            '''print 'exploring age'
+            explore_age(loc_city)
+            sys.exit(1)'''
+        cur.execute(qry)
+        tweets_info = cur.fetchall()
+        print '...No. Tweets: ' + str(len(tweets_info))
+        
+        visualize_uclass_city(loc_city, u_category, tweets_info, len(u_class), plotIndex, axis, method)
+        plotIndex += 1
+    plt.savefig('plt/inst_'+name_city+'_'+u_cat+'_'+axis+'_'+method)

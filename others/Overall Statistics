@@ -1,0 +1,45 @@
+Overall Statistics
+
+Total #users in four cities
+select count(distinct U.id) from twitter_tweets as T, twitter_profiles as U 
+                where (((`latitude` between 52.299175 and 52.427505 ) and (`longitude` between 4.739402 and 4.989898 )) or ((`latitude` between 41.8200201386 and 41.9744022955 ) and (`longitude` between 12.3945787041 and 12.5703003967 )) or ((`latitude` between 48.815573 and 48.902145 ) and (`longitude` between 2.2609345347 and 2.4228856827 )) or ((`latitude` between 51.4513133054 and 51.5538081151 ) and (`longitude` between -0.3240025797 and 0.0730833169 )) ) and 
+                T.userId=U.id; 
+
+18250
+
+with gender, with age
+
+
+#############Am - #users
+
+select count(T.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 52.299175 and 52.427505 ) and (`longitude` between 4.739402 and 4.989898 )) and 
+                T.userId=U.id; 
+
+select count(distinct U.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 52.299175 and 52.427505 ) and (`longitude` between 4.739402 and 4.989898 )) and 
+                T.userId=U.id; 
+#############Rome - #users
+select count(distinct T.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 41.8200201386 and 41.9744022955 ) and (`longitude` between 12.3945787041 and 12.5703003967 )) and 
+                T.userId=U.id; 
+select count(distinct U.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 41.8200201386 and 41.9744022955 ) and (`longitude` between 12.3945787041 and 12.5703003967 )) and 
+                T.userId=U.id; 
+
+#############Paris - #users
+select count(distinct T.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 48.815573 and 48.902145 ) and (`longitude` between 2.2609345347 and 2.4228856827 )) and 
+                T.userId=U.id; 
+select count(distinct U.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 48.815573 and 48.902145 ) and (`longitude` between 2.2609345347 and 2.4228856827 )) and 
+                T.userId=U.id; 
+
+
+#############London - #users
+select count(distinct T.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 51.4513133054 and 51.5538081151 ) and (`longitude` between -0.3240025797 and 0.0730833169 )) and 
+                T.userId=U.id; 
+select count(distinct U.id) from twitter_tweets as T, twitter_profiles as U 
+                where ((`latitude` between 51.4513133054 and 51.5538081151 ) and (`longitude` between -0.3240025797 and 0.0730833169 )) and 
+                T.userId=U.id; 

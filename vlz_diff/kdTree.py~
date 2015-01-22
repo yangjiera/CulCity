@@ -1,0 +1,134 @@
+# Copyleft 2008 Sturla Molden
+# University of Oslo
+
+#import psyco
+#psyco.full()
+
+import numpy
+import copy
+
+
+import matplotlib.pyplot as plt
+from matplotlib import dates
+from matplotlib.colors import Normalize
+from pylab import *
+from scipy.stats.distributions import norm
+from mpl_toolkits.mplot3d.axes3d import Axes3D
+
+def kdtree( data, leafsize):
+    """
+    build a kd-tree for O(n log n) nearest neighbour search
+
+    input:
+        data:       2D ndarray, shape =(ndim,ndata), preferentially C order
+        leafsize:   max. number of data points to leave in a leaf
+
+    output:
+        kd-tree:    list of tuples
+    """
+
+    leaves = []
+
+    ndim = data.shape[0]
+    ndata = data.shape[1]
+    #print ndim
+    #print ndata
+
+    # find bounding hyper-rectangle
+    hrect = numpy.zeros((2,data.shape[0]))
+    hrect[0,:] = data.min(axis=1)
+    hrect[1,:] = data.max(axis=1)
+
+    # create root of kd-tree
+    idx = numpy.argsort(data[0,:], kind='mergesort')
+    data[:,:] = data[:,idx]
+    splitval = data[0,ndata/2]
+
+    left_hrect = hrect.copy()
+    right_hrect = hrect.copy()
+    left_hrect[1, 0] = splitval
+    right_hrect[0, 0] = splitval
+
+    tree = [(None, None, left_hrect, right_hrect, None, None)]
+
+    stack = [(data[:,:ndata/2], idx[:ndata/2], 1, 0, True),
+             (data[:,ndata/2:], idx[ndata/2:], 1, 0, False)]
+
+    # recursively split data in halves using hyper-rectangles:
+    while stack:
+
+        # pop data off stack
+        data, didx, depth, parent, leftbranch = stack.pop()
+        ndata = data.shape[1]
+        nodeptr = len(tree)
+
+        # update parent node
+
+        _didx, _data, _left_hrect, _right_hrect, left, right = tree[parent]
+
+        tree[parent] = (_didx, _data, _left_hrect, _right_hrect, nodeptr, right) if leftbranch \
+            else (_didx, _data, _left_hrect, _right_hrect, left, nodeptr)
+
+        # insert node in kd-tree
+
+        # leaf node?
+        if ndata <= leafsize:
+            _didx = didx.copy()
+            _data = data.copy()
+            leaf = (_didx, _data, None, None, 0, 0)
+            #leaf = (_data)
+            tree.append(leaf)
+            leaves.append(_didx)
+
+        # not a leaf, split the data in two      
+        else:
+            splitdim = depth % ndim
+            idx = numpy.argsort(data[splitdim,:], kind='mergesort')
+            data[:,:] = data[:,idx]
+            didx = didx[idx]
+            nodeptr = len(tree)
+            stack.append((data[:,:ndata/2], didx[:ndata/2], depth+1, nodeptr, True))
+            stack.append((data[:,ndata/2:], didx[ndata/2:], depth+1, nodeptr, False))
+            splitval = data[splitdim,ndata/2]
+            if leftbranch:
+                left_hrect = _left_hrect.copy()
+                right_hrect = _left_hrect.copy()
+            else:
+                left_hrect = _right_hrect.copy()
+                right_hrect = _right_hrect.copy()
+            left_hrect[1, splitdim] = splitval
+            right_hrect[0, splitdim] = splitval
+
+            #print data
+            # append node to tree
+            tree.append((None, None, left_hrect, right_hrect, None, None))
+
+    return tree,leaves
+
+if __name__ == '__main__':
+	data = numpy.transpose(numpy.array([[3,2], [-3,-2],[-2,-1],[-1,-1],[1,1],[2,1]]))
+	tree,leaves = kdtree(data, 3)
+	print leaves
+    data_plt = []
+    color_plt = []
+    data_plt_rec = []
+    color_plt_rec = []
+    lens = []
+    for region in leaves:
+        pos = 0
+        for dot_index in region:
+            data_plt.append(data[dot_index])
+            pos += class_index[dot_index]
+        for dot_index in region:
+            color_plt.append(pos)
+        lens.append(len(region))
+        data_plt_rec, color_plt_rec = color_grid(data_plt_rec, color_plt_rec, data_plt, pos)
+    print lens
+    #print color_plt
+    cmap=plt.cm.bwr
+    mm = math.fabs(max(math.fabs(max(color_plt)),math.fabs(min(color_plt))))
+    norm = Normalize(vmin=-math.fabs(max(math.fabs(max(color_plt)),math.fabs(min(color_plt)))), vmax=math.fabs(max(math.fabs(max(color_plt)),math.fabs(min(color_plt))))) 
+    #plt.scatter([x[0] for x in data_plt], [x[1] for x in data_plt],  c=cmap(norm(color_plt)), s=10)# s=1, c=np.array(color_plt)
+    plt.scatter([x[0] for x in data_plt_rec], [x[1] for x in data_plt_rec],  c=cmap(norm(color_plt_rec)), s=10)# s=1, c=np.array(color_plt)
+
+	
